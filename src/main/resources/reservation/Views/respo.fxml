@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="reservation.reservation.controller.RespoController">
+
+    <!-- ===== HEADER ===== -->
+    <top>
+        <Label text="Dashboard Responsable"
+       style="-fx-font-size: 20px; -fx-font-weight: bold;"
+       BorderPane.alignment="CENTER">
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+</Label>
+    </top>
+
+    <!-- ===== CENTER ===== -->
+    <center>
+        <VBox spacing="20">
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+            <!-- ================= SALLES ================= -->
+            <VBox spacing="10">
+                <Label text="Mes salles"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <TableView fx:id="tableSalles" prefHeight="200">
+
+                    <columns>
+                        <TableColumn text="ID" prefWidth="60">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="id"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Type" prefWidth="150">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="typeSalle"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Capacité" prefWidth="100">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="capacite"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Étage" prefWidth="80">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="numEtage"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Prix" prefWidth="100">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="prix"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Disponible" prefWidth="120">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="dispo"/>
+                            </cellValueFactory>
+                        </TableColumn>
+                    </columns>
+                </TableView>
+
+                <HBox spacing="10">
+                    <Button text="Ajouter Salle" onAction="#ajouterSalle" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" prefWidth="140"/>
+                    <Button text="Modifier Salle" onAction="#modifierSalle" style="-fx-background-color: #FFC107; -fx-text-fill: black;" prefWidth="140"/>
+                    <Button text="Supprimer Salle" onAction="#supprimerSalle" style="-fx-background-color: #F44336; -fx-text-fill: white;" prefWidth="140"/>
+                    <Button text="Changer disponibilité" onAction="#changerDisponibilite" style="-fx-background-color: #2196F3; -fx-text-fill: white;" prefWidth="180"/>
+                </HBox>
+            </VBox>
+
+            <Separator/>
+
+            <!-- ================= RESERVATIONS ================= -->
+            <VBox spacing="10">
+                <Label text="Réservations"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <TableView fx:id="tableReservations" prefHeight="200">
+
+                    <columns>
+                        <TableColumn text="ID" prefWidth="60">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="id"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Date" prefWidth="180">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="dateReservation"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="État" prefWidth="120">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="etat"/>
+                            </cellValueFactory>
+                        </TableColumn>
+
+                        <TableColumn text="Total" prefWidth="100">
+                            <cellValueFactory>
+                                <PropertyValueFactory property="total"/>
+                            </cellValueFactory>
+                        </TableColumn>
+                    </columns>
+                </TableView>
+
+                <HBox spacing="15">
+                    <Button text="Valider"
+                            onAction="#validerReservation"
+                            style="-fx-background-color: #4CAF50; -fx-text-fill: white;"
+                            prefWidth="120"/>
+
+                    <Button text="Refuser"
+                            onAction="#refuserReservation"
+                            style="-fx-background-color: #F44336; -fx-text-fill: white;"
+                            prefWidth="120"/>
+                </HBox>
+            </VBox>
+
+        </VBox>
+    </center>
+
+</BorderPane>
+
