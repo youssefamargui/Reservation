@@ -31,80 +31,104 @@ public class RespoController {
     private TableView<Reservation> tableReservations;
 
     @FXML
+    private Label salleFormTitle;
+
+    @FXML
+    private TextField salleTypeField;
+
+    @FXML
+    private TextField salleCapaciteField;
+
+    @FXML
+    private TextField salleNumEtageField;
+
+    @FXML
+    private TextField sallePrixField;
+
+    @FXML
+    private ComboBox<Etage> salleEtageCombo;
+
+    @FXML
+    private CheckBox salleDispoCheck;
+
+    private Salle salleEnEdition;
+
+    @FXML
     public void initialize() {
-        try {
-            System.out.println("initialize RespoController called");
-            respo = (Respo) SessionCon.getUser();
-            System.out.println("Respo ID: " + respo.getId());
-            int nbSalles = salleDAO.getSallesByRespo(respo.getId()).size();
-            System.out.println("Nb salles: " + nbSalles);
-
-            tableSalles.getItems().setAll(
-                    salleDAO.getSallesByRespo(respo.getId())
-            );
-
-            tableReservations.getItems().setAll(
-                    reservationDAO.getReservationsByRespo(respo.getId())
-            );
-        } catch (Exception e) {
-            e.printStackTrace();
+        respo = (Respo) SessionCon.getUser();
+        if (respo == null) {
+            showAlert("Erreur", "Aucun utilisateur connecté");
+            return;
         }
+
+        initSalleForm();
+        refreshSalles();
+        refreshReservations();
     }
 
     // ================= SALLES =================
 
     @FXML
     public void ajouterSalle() {
-        Dialog<Salle> dialog = buildSalleDialog(null);
-        dialog.showAndWait().ifPresent(salle -> {
-            salle.setRespo(respo);
-            salleDAO.save(salle);
-            tableSalles.getItems().setAll(salleDAO.getSallesByRespo(respo.getId()));
-            showAlert("Succès", "Salle ajoutée avec succès");
-        });
+        salleEnEdition = null;
+        salleFormTitle.setText("Ajouter une salle");
+        clearSalleForm();
+        salleDispoCheck.setSelected(true);
     }
 
     @FXML
     public void modifierSalle() {
-        Salle salle = tableSalles.getSelectionModel().getSelectedItem();
-        if (salle == null) {
-            showAlert("Erreur", "Veuillez sélectionner une salle à modifier");
+        Salle salle = getSelectedSalle("Veuillez sélectionner une salle à modifier");
+        if (salle == null) return;
+
+        salleEnEdition = salle;
+        salleFormTitle.setText("Modifier la salle #" + salle.getId());
+        fillSalleFormFromSalle(salle);
+    }
+
+    @FXML
+    public void enregistrerSalle() {
+        Salle salleFromForm = buildSalleFromFormFields();
+        if (salleFromForm == null) {
             return;
         }
-        Dialog<Salle> dialog = buildSalleDialog(salle);
-        dialog.showAndWait().ifPresent(updated -> {
-            salle.setTypeSalle(updated.getTypeSalle());
-            salle.setCapacite(updated.getCapacite());
-            salle.setNumEtage(updated.getNumEtage());
-            salle.setPrix(updated.getPrix());
-            salle.setDispo(updated.isDispo());
-            salle.setEtage(updated.getEtage());
-            salleDAO.update(salle);
-            tableSalles.getItems().setAll(salleDAO.getSallesByRespo(respo.getId()));
-            showAlert("Succès", "Salle modifiée avec succès");
-        });
+
+        if (salleEnEdition == null) {
+            salleFromForm.setRespo(respo);
+            runSalleAction("Salle ajoutée avec succès", () -> salleDAO.save(salleFromForm));
+        } else {
+            salleEnEdition.setTypeSalle(salleFromForm.getTypeSalle());
+            salleEnEdition.setCapacite(salleFromForm.getCapacite());
+            salleEnEdition.setNumEtage(salleFromForm.getNumEtage());
+            salleEnEdition.setPrix(salleFromForm.getPrix());
+            salleEnEdition.setDispo(salleFromForm.isDispo());
+            salleEnEdition.setEtage(salleFromForm.getEtage());
+            runSalleAction("Salle modifiée avec succès", () -> salleDAO.update(salleEnEdition));
+        }
+
+        annulerEditionSalle();
+    }
+
+    @FXML
+    public void annulerEditionSalle() {
+        salleEnEdition = null;
+        salleFormTitle.setText("Formulaire Salle");
+        clearSalleForm();
+        salleDispoCheck.setSelected(true);
     }
 
     @FXML
     public void supprimerSalle() {
-        Salle salle = tableSalles.getSelectionModel().getSelectedItem();
-        if (salle == null) {
-            showAlert("Erreur", "Veuillez sélectionner une salle à supprimer");
-            return;
-        }
-        salleDAO.delete(salle);
-        tableSalles.getItems().setAll(salleDAO.getSallesByRespo(respo.getId()));
-        showAlert("Succès", "Salle supprimée avec succès");
+        Salle salle = getSelectedSalle("Veuillez sélectionner une salle à supprimer");
+        if (salle == null) return;
+
+        runSalleAction("Salle supprimée avec succès", () -> salleDAO.delete(salle));
     }
 
     @FXML
     public void changerDisponibilite() {
-        Salle salle = tableSalles.getSelectionModel().getSelectedItem();
-
-        if (salle == null) {
-            showAlert("Erreur", "Veuillez sélectionner une salle");
-            return;
-        }
+        Salle salle = getSelectedSalle("Veuillez sélectionner une salle");
+        if (salle == null) return;
 
         salle.setDispo(!salle.isDispo());
         salleDAO.update(salle);
@@ -116,37 +140,12 @@ public class RespoController {
 
     @FXML
     public void validerReservation() {
-        Reservation reservation = tableReservations.getSelectionModel().getSelectedItem();
-
-        if (reservation == null) {
-            showAlert("Erreur", "Sélectionnez une réservation");
-            return;
-        }
-
-        if (!respo.isActif()) {
-            showAlert("Accès refusé", "Responsable désactivé");
-            return;
-        }
-
-        reservation.setEtat("validee");
-        reservationDAO.update(reservation);
-
-        tableReservations.refresh();
+        updateReservationEtat("validee", true);
     }
 
     @FXML
     public void refuserReservation() {
-        Reservation reservation = tableReservations.getSelectionModel().getSelectedItem();
-
-        if (reservation == null) {
-            showAlert("Erreur", "Sélectionnez une réservation");
-            return;
-        }
-
-        reservation.setEtat("refusee");
-        reservationDAO.update(reservation);
-
-        tableReservations.refresh();
+        updateReservationEtat("refusee", false);
     }
 
     // ================= UTIL =================
@@ -159,22 +158,155 @@ public class RespoController {
         alert.show();
     }
 
-    private Dialog<Salle> buildSalleDialog(Salle existing) {
-        Dialog<Salle> dialog = new Dialog<>();
-        dialog.setTitle(existing == null ? "Ajouter une salle" : "Modifier une salle");
+    private void showError(String msg) {
+        showAlert("Erreur", msg);
+    }
 
-        ButtonType saveButtonType = new ButtonType(existing == null ? "Ajouter" : "Enregistrer", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+    private void runSalleAction(String successMessage, Runnable action) {
+        action.run();
+        refreshSalles();
+        showAlert("Succès", successMessage);
+    }
 
-        TextField typeField = new TextField();
-        TextField capaciteField = new TextField();
-        TextField numEtageField = new TextField();
-        TextField prixField = new TextField();
-        CheckBox dispoCheck = new CheckBox("Disponible");
+    private void updateReservationEtat(String etat, boolean checkActifRespo) {
+        Reservation reservation = getSelectedReservation("Sélectionnez une réservation");
+        if (reservation == null) return;
 
+        if (checkActifRespo && !respo.isActif()) {
+            showAlert("Accès refusé", "Responsable désactivé");
+            return;
+        }
+
+        reservation.setEtat(etat);
+        reservationDAO.update(reservation);
+        tableReservations.refresh();
+    }
+
+    private void refreshSalles() {
+        tableSalles.getItems().setAll(salleDAO.getSallesByRespo(respo.getId()));
+    }
+
+    private void refreshReservations() {
+        tableReservations.getItems().setAll(reservationDAO.getReservationsByRespo(respo.getId()));
+    }
+
+    private void initSalleForm() {
+        if (salleEtageCombo == null) return;
+        salleEtageCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Etage item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : ("Etage #" + item.getId()));
+            }
+        });
+        salleEtageCombo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Etage item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : ("Etage #" + item.getId()));
+            }
+        });
+
+        refreshEtagesCombo();
+        annulerEditionSalle();
+    }
+
+    private void refreshEtagesCombo() {
+        if (salleEtageCombo == null) return;
+        salleEtageCombo.getItems().setAll(etageDAO.getEtagesByRespo(respo.getId()));
+    }
+
+    private void clearSalleForm() {
+        if (salleTypeField != null) salleTypeField.clear();
+        if (salleCapaciteField != null) salleCapaciteField.clear();
+        if (salleNumEtageField != null) salleNumEtageField.clear();
+        if (sallePrixField != null) sallePrixField.clear();
+        if (salleEtageCombo != null) salleEtageCombo.getSelectionModel().clearSelection();
+    }
+
+    private void fillSalleFormFromSalle(Salle salle) {
+        salleTypeField.setText(salle.getTypeSalle());
+        salleCapaciteField.setText(String.valueOf(salle.getCapacite()));
+        salleNumEtageField.setText(String.valueOf(salle.getNumEtage()));
+        sallePrixField.setText(String.valueOf(salle.getPrix()));
+        salleDispoCheck.setSelected(salle.isDispo());
+        refreshEtagesCombo();
+        selectEtage(salleEtageCombo, salle.getEtage());
+    }
+
+    private Salle buildSalleFromFormFields() {
+        String type = salleTypeField.getText();
+        Integer capacite = parseInt(salleCapaciteField.getText());
+        Integer numEtage = parseInt(salleNumEtageField.getText());
+        Double prix = parseDouble(sallePrixField.getText());
+        Etage etage = salleEtageCombo.getSelectionModel().getSelectedItem();
+
+        if (type == null || type.trim().isEmpty() || capacite == null || numEtage == null || prix == null || etage == null) {
+            showError("Veuillez remplir tous les champs correctement");
+            return null;
+        }
+
+        return buildSalleFromForm(type, capacite, numEtage, prix, salleDispoCheck.isSelected(), etage);
+    }
+
+    private Salle getSelectedSalle(String errorMessage) {
+        Salle salle = tableSalles.getSelectionModel().getSelectedItem();
+        if (salle == null) {
+            showError(errorMessage);
+        }
+        return salle;
+    }
+
+    private Reservation getSelectedReservation(String errorMessage) {
+        Reservation reservation = tableReservations.getSelectionModel().getSelectedItem();
+        if (reservation == null) {
+            showError(errorMessage);
+        }
+        return reservation;
+    }
+
+    private void selectEtage(ComboBox<Etage> combo, Etage selected) {
+        if (selected == null) return;
+        for (Etage e : combo.getItems()) {
+            if (e != null && e.getId() == selected.getId()) {
+                combo.getSelectionModel().select(e);
+                return;
+            }
+        }
+    }
+
+    private Salle buildSalleFromForm(String type, int capacite, int numEtage, double prix, boolean dispo, Etage etage) {
+        Salle salle = new Salle();
+        salle.setTypeSalle(type == null ? "" : type.trim());
+        salle.setCapacite(capacite);
+        salle.setNumEtage(numEtage);
+        salle.setPrix(prix);
+        salle.setDispo(dispo);
+        salle.setEtage(etage);
+        return salle;
+    }
+
+    private Integer parseInt(String text) {
+        try {
+            return Integer.parseInt(text.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Double parseDouble(String text) {
+        try {
+            return Double.parseDouble(text.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private ComboBox<Etage> buildEtageCombo() {
         List<Etage> etages = etageDAO.getEtagesByRespo(respo.getId());
         ComboBox<Etage> etageCombo = new ComboBox<>();
         etageCombo.getItems().setAll(etages);
+
         etageCombo.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Etage item, boolean empty) {
@@ -190,80 +322,6 @@ public class RespoController {
             }
         });
 
-        if (existing != null) {
-            typeField.setText(existing.getTypeSalle());
-            capaciteField.setText(String.valueOf(existing.getCapacite()));
-            numEtageField.setText(String.valueOf(existing.getNumEtage()));
-            prixField.setText(String.valueOf(existing.getPrix()));
-            dispoCheck.setSelected(existing.isDispo());
-            if (existing.getEtage() != null) {
-                for (Etage e : etageCombo.getItems()) {
-                    if (e != null && e.getId() == existing.getEtage().getId()) {
-                        etageCombo.getSelectionModel().select(e);
-                        break;
-                    }
-                }
-            }
-        } else {
-            dispoCheck.setSelected(true);
-        }
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.add(new Label("Type"), 0, 0);
-        grid.add(typeField, 1, 0);
-        grid.add(new Label("Capacité"), 0, 1);
-        grid.add(capaciteField, 1, 1);
-        grid.add(new Label("Num étage"), 0, 2);
-        grid.add(numEtageField, 1, 2);
-        grid.add(new Label("Prix"), 0, 3);
-        grid.add(prixField, 1, 3);
-        grid.add(new Label("Étage (FK)"), 0, 4);
-        grid.add(etageCombo, 1, 4);
-        grid.add(dispoCheck, 1, 5);
-
-        GridPane.setHgrow(typeField, Priority.ALWAYS);
-        GridPane.setHgrow(capaciteField, Priority.ALWAYS);
-        GridPane.setHgrow(numEtageField, Priority.ALWAYS);
-        GridPane.setHgrow(prixField, Priority.ALWAYS);
-        GridPane.setHgrow(etageCombo, Priority.ALWAYS);
-
-        dialog.getDialogPane().setContent(grid);
-
-        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
-        saveButton.disableProperty().bind(
-                typeField.textProperty().isEmpty()
-                        .or(capaciteField.textProperty().isEmpty())
-                        .or(numEtageField.textProperty().isEmpty())
-                        .or(prixField.textProperty().isEmpty())
-                        .or(etageCombo.getSelectionModel().selectedItemProperty().isNull())
-        );
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton != saveButtonType) {
-                return null;
-            }
-            try {
-                int capacite = Integer.parseInt(capaciteField.getText().trim());
-                int numEtage = Integer.parseInt(numEtageField.getText().trim());
-                double prix = Double.parseDouble(prixField.getText().trim());
-                Etage etage = etageCombo.getSelectionModel().getSelectedItem();
-
-                Salle salle = new Salle();
-                salle.setTypeSalle(typeField.getText().trim());
-                salle.setCapacite(capacite);
-                salle.setNumEtage(numEtage);
-                salle.setPrix(prix);
-                salle.setDispo(dispoCheck.isSelected());
-                salle.setEtage(etage);
-                return salle;
-            } catch (NumberFormatException e) {
-                showAlert("Erreur", "Capacité, numéro d'étage et prix doivent être des nombres valides");
-                return null;
-            }
-        });
-
-        return dialog;
+        return etageCombo;
     }
 }

@@ -79,6 +79,34 @@
                     <Button text="Supprimer Salle" onAction="#supprimerSalle" style="-fx-background-color: #F44336; -fx-text-fill: white;" prefWidth="140"/>
                     <Button text="Changer disponibilité" onAction="#changerDisponibilite" style="-fx-background-color: #2196F3; -fx-text-fill: white;" prefWidth="180"/>
                 </HBox>
+
+                <VBox spacing="10" style="-fx-background-color: #f5f5f5; -fx-padding: 10; -fx-background-radius: 6;">
+                    <Label fx:id="salleFormTitle" text="Formulaire Salle" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+
+                    <GridPane hgap="10" vgap="10">
+                        <Label text="Type" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="salleTypeField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Capacité" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="salleCapaciteField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Num étage" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <TextField fx:id="salleNumEtageField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                        <Label text="Prix" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextField fx:id="sallePrixField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                        <Label text="Étage (FK)" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="salleEtageCombo" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                        <CheckBox fx:id="salleDispoCheck" text="Disponible" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                    </GridPane>
+
+                    <HBox spacing="10">
+                        <Button text="Enregistrer" onAction="#enregistrerSalle" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" prefWidth="140"/>
+                        <Button text="Annuler" onAction="#annulerEditionSalle" style="-fx-background-color: #cccccc; -fx-text-fill: black;" prefWidth="140"/>
+                    </HBox>
+                </VBox>
             </VBox>
 
             <Separator/>
